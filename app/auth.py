@@ -62,9 +62,11 @@ class JwtVerifier:
         if not algorithm or algorithm.lower() == "none":
             raise AuthError("Invalid authentication token")
 
-        if self._secret:
-            if not algorithm.startswith("HS"):
-                raise AuthError("Invalid authentication token")
+        # Supabase projects created since 2025 sign with asymmetric keys
+        # (ES256) even when a legacy JWT secret is still configured, so pick the
+        # key source from the token's own algorithm rather than from whether a
+        # secret happens to be present.
+        if self._secret and algorithm.startswith("HS"):
             key: Any = self._secret
         else:
             key = await self._signing_key(header.get("kid"), algorithm)
