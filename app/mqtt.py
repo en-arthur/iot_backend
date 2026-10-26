@@ -31,6 +31,7 @@ from app.batching import ReadingBatcher, ReadingRow
 from app.config import Settings
 from app.models import Board, RelayState
 from app.topics import (
+    is_command_topic,
     parse_relay_payload,
     parse_sensor_payload,
     parse_status_payload,
@@ -261,6 +262,9 @@ class MqttService:
         parsed = parse_topic(topic, prefix=self._prefix)
 
         if parsed is None:
+            if is_command_topic(topic, prefix=self._prefix):
+                logger.debug("ignoring relay command echo", extra={"topic": topic})
+                return
             logger.warning("ignoring malformed MQTT topic", extra={"topic": topic})
             return
 

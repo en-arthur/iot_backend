@@ -72,6 +72,35 @@ def decode_payload(payload: Payload) -> str | None:
     return None
 
 
+def is_command_topic(topic: str, *, prefix: str = DEFAULT_TOPIC_PREFIX) -> bool:
+    """Return True for ``boards/{id}/relays/{n}/set``.
+
+    The backend subscribes to the whole prefix, so it also receives the relay
+    commands it publishes itself. They are outbound-only, so they must be
+    skipped quietly instead of being reported as malformed.
+    """
+    if not isinstance(topic, str):
+        return False
+
+    prefix = prefix.strip("/")
+    if not prefix:
+        return False
+
+    marker = f"{prefix}/"
+    topic = topic.strip()
+    if not topic.startswith(marker):
+        return False
+
+    parts = topic[len(marker) :].split("/")
+    if len(parts) != 4 or parts[1] != "relays" or parts[3] != "set":
+        return False
+    if not _BOARD_ID_RE.fullmatch(parts[0]):
+        return False
+    if not parts[2].isdigit():
+        return False
+    return MIN_RELAY_NUMBER <= int(parts[2]) <= MAX_RELAY_NUMBER
+
+
 def parse_topic(topic: str, *, prefix: str = DEFAULT_TOPIC_PREFIX) -> ParsedTopic | None:
     """Parse a topic into a :class:`ParsedTopic`, or ``None`` if unrecognised."""
     if not isinstance(topic, str):

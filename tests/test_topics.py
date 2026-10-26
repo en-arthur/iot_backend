@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from app.topics import (
+    is_command_topic,
     parse_relay_payload,
     parse_sensor_payload,
     parse_status_payload,
@@ -163,3 +164,24 @@ class TestSensorPayload:
     )
     def test_invalid(self, payload):
         assert parse_sensor_payload(payload, now=NOW) is None
+
+
+class TestIsCommandTopic:
+    def test_relay_set_is_a_command(self):
+        assert is_command_topic("boards/esp32-01/relays/1/set") is True
+
+    @pytest.mark.parametrize(
+        "topic",
+        [
+            "boards/esp32-01/status",
+            "boards/esp32-01/sensors/temperature",
+            "boards/esp32-01/relays/1/state",
+            "boards/esp32-01/relays/0/set",
+            "boards/esp32-01/relays/x/set",
+            "boards/esp32-01/relays/1/set/extra",
+            "other/esp32-01/relays/1/set",
+            "",
+        ],
+    )
+    def test_other_topics_are_not_commands(self, topic):
+        assert is_command_topic(topic) is False
