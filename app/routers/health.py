@@ -16,6 +16,12 @@ router = APIRouter(tags=["health"])
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
+@router.get("/", include_in_schema=False)
+async def root() -> dict[str, str]:
+    """Cheap root probe so hosting platforms see a 200 without touching the DB."""
+    return {"service": "relayboard-backend", "status": "running"}
+
+
 @router.get("/health", response_model=HealthResponse, summary="Liveness and dependencies")
 async def health(request: Request, session: SessionDep) -> HealthResponse:
     """Report MQTT and database connectivity.

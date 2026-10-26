@@ -39,21 +39,61 @@ Check it:
 curl -s localhost:8000/health
 ```
 
-## Deploy on Render
+## Deploy on FastAPI Cloud
 
-1. Push this repository to GitHub.
-2. In Render: **New → Blueprint**, select the repo, and apply `render.yaml`.
-   Or create a **Web Service** manually with:
-   - **Build command:** `pip install -r requirements.txt`
-   - **Start command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-   - **Health check path:** `/health`
-3. Add the environment variables from `.env.example` in the Render dashboard.
-4. Use an **always-on instance**. Free web services spin down after inactivity,
-   which stops the MQTT listener and the board status updates.
-5. Set `CORS_ORIGINS` to your Vercel domain, e.g.
-   `https://your-app.vercel.app`.
+This repo is ready for [FastAPI Cloud](https://fastapicloud.com): dependencies
+come from `requirements.txt`, the entrypoint `app.main:app` is auto-detected,
+and `.python-version` pins Python 3.11.
 
-`Procfile` and `runtime.txt` are included for Railway/Heroku-style hosts.
+### Option A — GitHub
+
+1. In the FastAPI Cloud dashboard, **Create app → GitHub Repo**.
+2. Pick `en-arthur/iot_backend` (the app is at the repo root, so leave the
+   **Root Directory** empty).
+3. Add the environment variables from `.env.example` before the first deploy.
+4. Click **Create App**. Every push to `main` redeploys.
+
+### Option B — CLI
+
+```bash
+pip install "fastapi[standard]"
+cd backend
+fastapi login
+fastapi deploy
+```
+
+`fastapi deploy` creates a local `.fastapicloud/` folder (already gitignored).
+
+### Required scaling settings
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| Minimum replicas | `1` | `0` stops the app when idle and kills the MQTT listener |
+| Maximum replicas | `1` | Two replicas would both subscribe and double-insert readings |
+
+**Both settings require the Pro plan.** On Hobby the minimum is locked to `0`,
+so the service sleeps whenever there is no HTTP traffic. Because the frontend
+reads Supabase directly, the backend would never be woken — boards would appear
+offline and no sensor readings would be stored.
+
+### Set the variables
+
+```bash
+fastapi cloud env set --secret DATABASE_URL "postgresql://..."
+fastapi cloud env set --secret SUPABASE_JWT_SECRET "..."
+fastapi cloud env set --secret MQTT_PASSWORD "..."
+fastapi cloud env set SUPABASE_URL "https://<project-ref>.supabase.co"
+fastapi cloud env set MQTT_HOST "broker.example.com"
+fastapi cloud env set MQTT_USERNAME "relayboard"
+fastapi cloud env set CORS_ORIGINS "https://your-app.vercel.app"
+fastapi cloud env set APP_ENV "production"
+```
+
+Or paste the whole `.env` file into **Environment Variables → Import**.
+Environment changes apply on the next deployment.
+
+`Procfile` is included for hosts that use one; it is not needed by FastAPI
+Cloud.
 
 ## Critical: broker reachability
 
