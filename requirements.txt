@@ -1,4 +1,7 @@
-fastapi>=0.115.0,<1.0
+# The [standard] extra brings fastapi-cli, which hosting platforms (including
+# FastAPI Cloud) use to start the app. Without it the `fastapi` entry point
+# exits with "please install fastapi[standard]".
+fastapi[standard]>=0.115.0,<1.0
 uvicorn[standard]>=0.30.0,<1.0
 aiomqtt>=2.3.0,<3.0
 sqlmodel>=0.0.22,<0.1
